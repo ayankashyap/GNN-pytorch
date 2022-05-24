@@ -11,12 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 class GNN_Config:
-    """(Most) GNN Config params according to https://arxiv.org/pdf/1805.10988.pdf"""
+    """(Most) GNN Config params for the ZINC Dataset"""
 
     attn_pdrop = 0.1
     gcn_pdrop = 0.1
     n_head = 4
     inp_dim = 58
+    n_type = 28 # 28 types of atoms(nodes) in the zinc dataset
     gcn_dim = 32  # in the paper every gcn layer is set to 32
     readout_dim = 512
     n_layers = 4
@@ -33,6 +34,7 @@ class GCN_Stack(nn.ModuleList):
     def forward(self, x, adj):
         for i, module in enumerate(self):
             if i == 0:
+                #logger.info(x.shape)
                 x = module(x, adj)
             else:
                 x = x + module(x, adj)
@@ -47,13 +49,14 @@ class VanillaGCN(nn.Module):
 
         # setup the stack of gcn layers
         dims = [config.inp_dim]
-        for _ in range((2 * config.n_layers) - 1):
+        for _ in range((2 * config.n_layers)):
             dims.append(config.gcn_dim)
         self.gcn_stack = GCN_Stack(
-            [GraphConvLayer(dims[i], dims[i + 1]) for i in range(config.n_layers - 1)]
+            [GraphConvLayer(dims[i], dims[i + 1]) for i in range(config.n_layers)]
         )
-
-        self.gcn_drop = nn.Dropout(config.gcn_pdrop)
+        
+        self.node_embd = nn.Embedding(config.n_type, config.inp_dim)
+        #self.gcn_drop = nn.Dropout(config.gcn_pdrop)
         self.readout = ReadOut(config.gcn_dim, config.readout_dim)
 
         self.apply(self._init_weights)
@@ -68,11 +71,14 @@ class VanillaGCN(nn.Module):
                 torch.nn.init.zeros_(module.bias)
 
     def forward(self, inp, adj, targets=None):
-        x = self.gcn_stack(inp, adj)
-        x = self.gcn_drop(x)
+
+        x = self.node_embd(inp)
+
+        x = self.gcn_stack(x, adj)
+        #x = self.gcn_drop(x)
         pred = self.readout(x)
         if targets is not None:
-            # if training, return prediction as well asRMSE loss
-            loss = torch.sqrt(F.mse_loss(pred, targets))
+            # if training, return prediction as well as MSE loss
+            loss = F.mse_loss(pred, targets)
             return pred, loss
         return pred
