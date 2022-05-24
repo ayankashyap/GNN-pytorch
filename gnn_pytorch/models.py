@@ -16,8 +16,8 @@ class GNN_Config:
     attn_pdrop = 0.1
     gcn_pdrop = 0.1
     n_head = 4
-    inp_dim = 58
-    n_type = 28 # 28 types of atoms(nodes) in the zinc dataset
+    inp_dim = 32
+    n_type = 29 # 28 types of atoms(nodes) in the zinc dataset + 1 for padding
     gcn_dim = 32  # in the paper every gcn layer is set to 32
     readout_dim = 512
     n_layers = 4
@@ -33,11 +33,11 @@ class GCN_Stack(nn.ModuleList):
     in their forward and we need to have both the node matrix """
     def forward(self, x, adj):
         for i, module in enumerate(self):
-            if i == 0:
-                #logger.info(x.shape)
-                x = module(x, adj)
-            else:
-                x = x + module(x, adj)
+            # if i == 0:
+            #     #logger.info(x.shape)
+            #     x = module(x, adj)
+            # else:
+            x = module(x, adj)
         return x    
 
 
@@ -55,7 +55,7 @@ class VanillaGCN(nn.Module):
             [GraphConvLayer(dims[i], dims[i + 1]) for i in range(config.n_layers)]
         )
         
-        self.node_embd = nn.Embedding(config.n_type, config.inp_dim)
+        self.node_embd = nn.Embedding(config.n_type, config.inp_dim, padding_idx=-1)
         #self.gcn_drop = nn.Dropout(config.gcn_pdrop)
         self.readout = ReadOut(config.gcn_dim, config.readout_dim)
 
@@ -71,7 +71,6 @@ class VanillaGCN(nn.Module):
                 torch.nn.init.zeros_(module.bias)
 
     def forward(self, inp, adj, targets=None):
-
         x = self.node_embd(inp)
 
         x = self.gcn_stack(x, adj)
@@ -79,6 +78,8 @@ class VanillaGCN(nn.Module):
         pred = self.readout(x)
         if targets is not None:
             # if training, return prediction as well as MSE loss
+            B, _, _ = targets.size()
+            targets = targets.view(B, 1)
             loss = F.mse_loss(pred, targets)
             return pred, loss
         return pred
