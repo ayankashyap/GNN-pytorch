@@ -58,6 +58,7 @@ class Trainer:
         )
 
         if config.WANDB:
+            os.environ["WANDB_START_METHOD"] = "thread"
             import wandb
             wandb.init(project=config.name, config=get_dict_from_class(config))
 
