@@ -59,7 +59,7 @@ class Trainer:
 
         if config.WANDB:
             import wandb
-            wandb.init(project=config.name, entity="Ayan", config=get_dict_from_class(config))
+            wandb.init(project=config.name, config=get_dict_from_class(config))
 
         def run_epoch(loader, is_train):
             if config.WANDB:
