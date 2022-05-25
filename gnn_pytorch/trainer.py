@@ -46,7 +46,7 @@ class Trainer:
         raw_model = self.model.module if hasattr(self.model, "module") else self.model
         if not osp.isdir(osp.dirname(ckpt_path)):
             logger.info(f"Creating directory {ckpt_path}") 
-            os.makedirs(ckpt_path)
+            os.makedirs(osp.dirname(ckpt_path))
         logger.info(f"saving model to {ckpt_path}")
         torch.save(raw_model.state_dict(), self.config.ckpt_path)
 
