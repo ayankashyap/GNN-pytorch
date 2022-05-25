@@ -9,3 +9,6 @@ def normalize(adj):
     norm_adj = r_inv @ adj
     return norm_adj
 
+def get_dict_from_class(config):
+    """convert class to dict"""
+    return {k:v for k,v in vars(config).items() if not k.startswith('__')}

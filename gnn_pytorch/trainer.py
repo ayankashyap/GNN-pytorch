@@ -1,4 +1,6 @@
 import logging
+import os.path as osp
+import os
 
 from tqdm import tqdm
 import numpy as np
@@ -7,15 +9,18 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader 
 
+from .utils import get_dict_from_class
 logger = logging.getLogger(__name__)
 
 class TrainerConfig:
+    name = "Vanilla GNN"
     max_epochs = 100
     batch_size = 100
     lr = 0.001
     weight_decay = 0.95
     num_workers = 2
-    ckpt_path = None
+    ckpt_path = './checkpoints/saved_model.pt' 
+    WANDB = False
 
     def __init__(self, **kwargs):
         for k,v in kwargs.items():
@@ -37,8 +42,12 @@ class Trainer:
                 self.model = self.model.to(self.device)
 
     def save_checkpoint(self):
+        ckpt_path = self.config.ckpt_path
         raw_model = self.model.module if hasattr(self.model, "module") else self.model
-        logger.info(f"saving {self.config.ckpt_path}")
+        if not osp.isdir(osp.dirname(ckpt_path)):
+            logger.info(f"Creating directory {ckpt_path}") 
+            os.makedirs(ckpt_path)
+        logger.info(f"saving model to {ckpt_path}")
         torch.save(raw_model.state_dict(), self.config.ckpt_path)
 
     def train(self):
@@ -48,7 +57,14 @@ class Trainer:
             raw_model.parameters(), lr=config.lr, weight_decay=config.weight_decay
         )
 
+        if config.WANDB:
+            import wandb
+            wandb.init(project=config.name, entity="Ayan", config=get_dict_from_class(config))
+
         def run_epoch(loader, is_train):
+            if config.WANDB:
+                wandb.watch(model)
+
             model.train(is_train)
 
             losses = []
@@ -98,11 +114,18 @@ class Trainer:
 
         for epoch in range(config.max_epochs):
             train_loss = run_epoch(train_loader, is_train=True)
-            logger.info(f"train_loss: {train_loss:.f}")
+            logger.info(f"train_loss: {train_loss:.2f}")
+            if config.WANDB: wandb.log({'train_loss': train_loss, 'epoch': epoch}) 
             val_loss = run_epoch(val_loader, is_train=False)
-            logger.info(f"val_loss: {val_loss:.f}")
+            logger.info(f"val_loss: {val_loss:.2f}")
+            if config.WANDB: wandb.log({'val_loss': val_loss, 'epoch': epoch}) 
 
             good_model = self.val_dataset is None or val_loss < best_loss
             if config.ckpt_path is not None and good_model:
                 best_loss = val_loss
+                logger.info(f"Best loss is {best_loss}")
+                if config.WANDB: wandb.run.summary["best_loss"] = best_loss
                 self.save_checkpoint()
+        
+        # finish the run
+        if config.WANDB: wandb.finish()
