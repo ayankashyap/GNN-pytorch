@@ -11,4 +11,4 @@ def normalize(adj):
 
 def get_dict_from_class(config):
     """convert class to dict"""
-    return {k:v for k,v in vars(config).items() if not k.startswith('__')}
+    return {k: getattr(config, k) for k in dir(config) if not k.startswith('__')} 

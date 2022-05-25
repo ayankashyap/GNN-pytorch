@@ -115,10 +115,10 @@ class Trainer:
         for epoch in range(config.max_epochs):
             train_loss = run_epoch(train_loader, is_train=True)
             logger.info(f"train_loss: {train_loss:.2f}")
-            if config.WANDB: wandb.log({'train_loss': train_loss, 'epoch': epoch}) 
+            if config.WANDB: wandb.log({'train_loss': train_loss}) 
             val_loss = run_epoch(val_loader, is_train=False)
             logger.info(f"val_loss: {val_loss:.2f}")
-            if config.WANDB: wandb.log({'val_loss': val_loss, 'epoch': epoch}) 
+            if config.WANDB: wandb.log({'val_loss': val_loss}) 
 
             good_model = self.val_dataset is None or val_loss < best_loss
             if config.ckpt_path is not None and good_model:
