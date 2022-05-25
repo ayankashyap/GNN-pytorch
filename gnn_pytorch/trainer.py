@@ -84,7 +84,7 @@ class Trainer:
                     pred, loss = model(x, a, y)
                     if torch.cuda.device_count() > 1:
                         loss = loss.mean() # collapse loss in case of multiple gpus
-                losses.append(loss.item())
+                    losses.append(loss.item())
 
                 if is_train:
                     model.zero_grad()
@@ -115,10 +115,10 @@ class Trainer:
 
         for epoch in range(config.max_epochs):
             train_loss = run_epoch(train_loader, is_train=True)
-            logger.info(f"train_loss: {train_loss:.2f}")
+            logger.info(f"train_loss: {train_loss:.5f}")
             if config.WANDB: wandb.log({'train_loss': train_loss}) 
             val_loss = run_epoch(val_loader, is_train=False)
-            logger.info(f"val_loss: {val_loss:.2f}")
+            logger.info(f"val_loss: {val_loss:.5f}")
             if config.WANDB: wandb.log({'val_loss': val_loss}) 
 
             good_model = self.val_dataset is None or val_loss < best_loss

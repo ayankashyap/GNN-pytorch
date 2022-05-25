@@ -55,7 +55,7 @@ class VanillaGCN(nn.Module):
             [GraphConvLayer(dims[i], dims[i + 1]) for i in range(config.n_layers)]
         )
         
-        self.node_embd = nn.Embedding(config.n_type, config.inp_dim, padding_idx=-1)
+        self.node_embd = nn.Embedding(config.n_type, config.inp_dim, padding_idx=28)
         #self.gcn_drop = nn.Dropout(config.gcn_pdrop)
         self.readout = ReadOut(config.gcn_dim, config.readout_dim)
 
